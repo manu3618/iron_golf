@@ -128,6 +128,14 @@ impl UrlSet {
     }
 }
 
+
+// TODO:
+// simple web server (axum?)
+// * GET id
+//   - if exists -> 302
+//   - else -> 404
+// * POST url
+//   - return id
 fn main() {
     println!("Hello, world!");
     let _ = dbg!(URL::from_str("http://manu.hbrt.eu/get?id=machin".into()));
