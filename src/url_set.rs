@@ -6,20 +6,18 @@ use std::fmt;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Default)]
-pub struct URL(String);
+pub struct Url(String);
 
 #[derive(Debug)]
 pub enum URLParseError {
     NoScheme,
     InvalidScheme(String),
     NoHost,
-    InvalidHost,
-    InvalidPath,
 }
 
 const KNOWN_SCHEME: [&str; 4] = ["http", "https", "ftp", "ftps"];
 
-impl FromStr for URL {
+impl FromStr for Url {
     type Err = URLParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -29,7 +27,7 @@ impl FromStr for URL {
             None => return Err(URLParseError::NoScheme),
         };
 
-        if scheme.chars().last() != Some(':') {
+        if !scheme.ends_with(':') {
             return Err(URLParseError::InvalidScheme(
                 "scheme should end with a ':'".into(),
             ));
@@ -52,12 +50,12 @@ impl FromStr for URL {
             Some(v) => v.to_lowercase(),
             None => return Err(URLParseError::NoHost),
         };
-        let path = parts.into_iter().collect::<Vec<_>>().join("/");
+        let path = parts.collect::<Vec<_>>().join("/");
         Ok(Self(format!("{scheme}://{host}/{path}")))
     }
 }
 
-impl fmt::Display for URL {
+impl fmt::Display for Url {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -78,6 +76,17 @@ impl ID {
     }
 }
 
+#[derive(Debug)]
+pub struct IdParseError;
+
+impl FromStr for ID {
+    type Err = IdParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.into()))
+    }
+}
+
 impl fmt::Display for ID {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
@@ -86,13 +95,12 @@ impl fmt::Display for ID {
 
 #[derive(Debug, Default)]
 pub struct UrlSet {
-    set: VecDeque<(ID, URL)>,
+    set: VecDeque<(ID, Url)>,
     max_size: usize,
 }
 
 impl UrlSet {
     pub fn new() -> Self {
-        let s = 1024;
         let s = 4;
         Self {
             set: VecDeque::with_capacity(s),
@@ -100,7 +108,7 @@ impl UrlSet {
         }
     }
 
-    pub fn store_url(&mut self, url: URL) -> ID {
+    pub fn store_url(&mut self, url: Url) -> ID {
         if self.set.len() > self.max_size - 1 {
             let _ = self.set.pop_front();
         }
@@ -114,13 +122,13 @@ impl UrlSet {
         id
     }
 
-    pub fn retrieve(&self, id: &ID) -> Option<URL> {
+    pub fn retrieve(&self, id: &ID) -> Option<Url> {
         let p = self.set.iter().position(|(a, _)| a == id)?;
         Some(self.set.get(p).unwrap().1.clone())
     }
 
     /// Retrieve an url and put it back in queue
-    pub fn retrieve_refresh(&mut self, id: &ID) -> Option<URL> {
+    pub fn retrieve_refresh(&mut self, id: &ID) -> Option<Url> {
         let p = self.set.iter().position(|(a, _)| a == id)?;
         let (id, url) = self.set.remove(p)?;
         self.set.push_back((id, url.clone()));
