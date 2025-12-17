@@ -6,7 +6,7 @@ use axum::{
     Router,
     extract::{Form, Path, State},
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Redirect, Response},
     routing::{get, post},
 };
 use std::sync::Arc;
@@ -46,21 +46,16 @@ async fn shorten(
 }
 
 /// return redirection to url
-async fn get_url(
-    State(url_set): State<Arc<AppState>>,
-    Path(id): Path<String>,
-) -> impl IntoResponse {
+async fn get_url(State(url_set): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     let url_set = url_set.url_set.lock();
     let url = url_set.await.retrieve_refresh(&id.parse().unwrap());
     match url {
-        None => Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body(format!("no shortcut register for {id}"))
-            .unwrap(),
-        Some(v) => Response::builder()
-            .status(StatusCode::PERMANENT_REDIRECT)
-            .body(format!("{v}"))
-            .unwrap(),
+        Some(v) => Redirect::to(format!("{v}").as_str()).into_response(),
+        None => (
+            StatusCode::NOT_FOUND,
+            format!("no shortcut register for {id}"),
+        )
+            .into_response(),
     }
 }
 
